@@ -548,7 +548,9 @@ async function saveDay(form){
 function ratings(){
   const d = D(), t = todayISO(), k = kickoff();
   const from14 = addDays(t, -13) < k ? k : addDays(t, -13);
-  const win = d.daily.filter(r => r.date >= from14 && r.date <= t);
+  // today only counts once something has been logged for it, so an unlogged morning does not drag ratings down
+  const tr = dayRow(t), todayLogged = tr && (num(tr.weight) !== null || num(tr.steps) !== null || num(tr.mood) !== null || tr.walk === true || tr.protein === true || tr.bed === true || tr.cooked === true);
+  const win = d.daily.filter(r => r.date >= from14 && (r.date < t || (r.date === t && todayLogged)));
   const days = Math.max(win.length, 0);
   const count = key => win.filter(r => r[key] === true).length;
   const steps = win.map(r => num(r.steps)).filter(v => v !== null);
