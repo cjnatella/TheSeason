@@ -316,8 +316,14 @@ async function api(method, payload){
   let res;
   if (method === 'GET') res = await fetch(c.url + (c.url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(c.token), {cache:'no-store'});
   else res = await fetch(c.url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(Object.assign({token:c.token}, payload))});
-  if (!res.ok) throw new Error('The sheet replied with status ' + res.status);
-  const j = await res.json();
+  if (!res.ok) { const e = new Error('The sheet link replied with status ' + res.status + '.'); e.fatal = true; throw e; }
+  const text = await res.text();
+  let j;
+  try { j = JSON.parse(text); }
+  catch(_) {
+    const m = /<title>([^<]*)<\/title>/i.exec(text) || /<div[^>]*>([^<]{8,160})/i.exec(text);
+    const e = new Error('The sheet link replied with a page instead of data' + (m ? ': "' + m[1].trim() + '"' : '') + '.'); e.fatal = true; throw e;
+  }
   if (!j.ok) { const e = new Error(j.error || 'The sheet refused the request.'); e.fatal = true; throw e; }
   return j.data;
 }
@@ -358,6 +364,7 @@ function status(){
   if (!state.cfg.url) { el.textContent = ''; return; }
   if (state.syncing) { el.textContent = 'Syncing with your sheet'; return; }
   const q = state.queue.length;
+  if (state.lastError && state.lastError !== 'offline') { el.classList.add('warn'); el.textContent = state.lastError; return; }
   if (state.lastError === 'offline') { el.classList.add('warn'); el.textContent = 'Offline. Showing what was last synced' + (q ? ', with ' + q + ' change' + (q>1?'s':'') + ' waiting.' : '.'); return; }
   if (D() && D().fetchedAt){ const m = Math.round((Date.now() - Date.parse(D().fetchedAt))/60000); el.textContent = 'Synced ' + (m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m/60) + ' h ago'); }
 }
