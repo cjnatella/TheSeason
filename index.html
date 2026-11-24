@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E2233">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="The Season">
+<title>The Season</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" href="fonts/big-shoulders-display-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:"Shoulders";src:url(fonts/big-shoulders-display-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap}
+@font-face{font-family:"Shoulders";src:url(fonts/big-shoulders-display-latin-800-normal.woff2) format("woff2");font-weight:800;font-display:swap}
+@font-face{font-family:"Atkinson";src:url(fonts/atkinson-hyperlegible-latin-400-normal.woff2) format("woff2");font-weight:400;font-display:swap}
+@font-face{font-family:"Atkinson";src:url(fonts/atkinson-hyperlegible-latin-700-normal.woff2) format("woff2");font-weight:700;font-display:swap}
+
+:root{
+  --night:#0E2233; --deep:#081521; --panel:#132C40; --panel-2:#183652;
+  --line:rgba(238,240,234,.11); --line-2:rgba(238,240,234,.2);
+  --chalk:#EEF0EA; --fog:#93A6B5; --flood:#FFB547; --flood-dim:rgba(255,181,71,.16);
+  --turf:#53B475; --brick:#E0654F; --draw:#D9C27A;
+  --display:"Shoulders","Arial Narrow",system-ui,sans-serif;
+  --body:"Atkinson",system-ui,-apple-system,sans-serif;
+  --tabs-h:64px;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--night);color:var(--chalk);font:400 17px/1.45 var(--body);
+  min-height:100vh;padding:env(safe-area-inset-top) 0 calc(var(--tabs-h) + env(safe-area-inset-bottom));
+  -webkit-tap-highlight-color:transparent}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--flood);outline-offset:2px}
+[hidden]{display:none!important}
+
+.wrap{max-width:560px;margin:0 auto;padding:0 20px}
+.top{display:flex;align-items:flex-end;justify-content:space-between;padding:18px 20px 6px;max-width:560px;margin:0 auto}
+.brand{font:800 30px/1 var(--display);letter-spacing:.01em;margin:0}
+.sub{color:var(--fog);font-size:15px;margin:4px 0 0}
+.gear{background:none;border:0;padding:8px;margin:-8px -8px 0 0;color:var(--fog)}
+.gear svg{width:24px;height:24px;display:block}
+.status{color:var(--fog);font-size:13px;padding:0 20px;max-width:560px;margin:0 auto 6px;min-height:18px}
+.status.warn{color:var(--draw)}
+
+h2{font:700 24px/1.1 var(--display);margin:30px 0 10px;letter-spacing:.01em}
+.muted{color:var(--fog)}
+.small{font-size:14px}
+
+/* scoreboard: the one loud element */
+.board{position:relative;margin:10px 0 0;background:#050E16;border-radius:18px;border:1px solid rgba(255,181,71,.22);
+  padding:18px 18px 16px;overflow:hidden}
+.board::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(rgba(255,255,255,.055) 1px,transparent 1.3px);background-size:6px 6px}
+.board-row{position:relative;display:grid;grid-template-columns:1fr auto 1fr;align-items:end}
+.side{display:flex;flex-direction:column}
+.side.right{align-items:flex-end;text-align:right}
+.who{color:var(--fog);font-size:14px}
+.num{font:800 104px/.86 var(--display);color:var(--flood);font-variant-numeric:tabular-nums;
+  text-shadow:0 0 22px rgba(255,181,71,.35)}
+.side.right .num{color:#C9D3DA;text-shadow:0 0 18px rgba(201,211,218,.18)}
+.colon{font:800 64px/1 var(--display);color:#3B5368;padding:0 6px 10px}
+.board-cap{position:relative;margin:14px 0 0;font-size:15px;color:#C9D3DA}
+.board-cap strong{color:var(--chalk)}
+
+.form{display:flex;gap:6px;flex-wrap:wrap}
+.pill{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font:800 19px/1 var(--display);color:var(--deep)}
+.pill.W{background:var(--turf)} .pill.D{background:var(--draw)} .pill.L{background:var(--brick)}
+.pill.empty{background:transparent;border:1px dashed var(--line-2);color:var(--fog)}
+
+.fixture{display:grid;grid-template-columns:62px 1fr;gap:14px;align-items:center;padding:14px 0;border-top:1px solid var(--line)}
+.fixture:last-child{border-bottom:1px solid var(--line)}
+.datebox{text-align:center;border-right:1px solid var(--line);padding-right:12px}
+.datebox .d{font:800 34px/.95 var(--display)}
+.datebox .m{font-size:13px;color:var(--fog)}
+.fixture .what{font-weight:700}
+.fixture .meta{color:var(--fog);font-size:14px}
+.fixture .act{margin-top:8px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:50px;padding:0 20px;border-radius:12px;border:0;
+  background:var(--flood);color:var(--deep);font-weight:700}
+.btn.wide{width:100%}
+.btn.ghost{background:transparent;color:var(--chalk);border:1px solid var(--line-2)}
+.btn.small{min-height:40px;padding:0 14px;font-size:15px}
+.btn:disabled{opacity:.5}
+.link{background:none;border:0;padding:0;color:var(--flood);font-weight:700;text-decoration:underline;text-underline-offset:3px}
+
+.basics{list-style:none;margin:0;padding:0}
+.basics li{display:flex;align-items:center;gap:12px;padding:11px 0;border-top:1px solid var(--line)}
+.basics li:last-child{border-bottom:1px solid var(--line)}
+.tick{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line-2);flex:none;display:grid;place-items:center}
+.tick.on{background:var(--turf);border-color:var(--turf)}
+.tick svg{width:14px;height:14px;display:none}
+.tick.on svg{display:block}
+.basics .val{margin-left:auto;color:var(--fog);font-size:15px}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.stat{padding:12px 0}
+.stat+.stat{border-left:1px solid var(--line);padding-left:14px}
+.stat .v{font:700 30px/1 var(--display)}
+.stat .l{color:var(--fog);font-size:13px;margin-top:4px}
+.spark{display:block;width:100%;height:64px;margin-top:12px}
+
+/* log */
+.daynav{display:flex;align-items:center;justify-content:space-between;margin:8px 0 4px}
+.daynav button{background:none;border:1px solid var(--line-2);border-radius:10px;width:44px;height:44px;display:grid;place-items:center}
+.daynav button:disabled{opacity:.3}
+.daynav .t{font:800 26px/1 var(--display);text-align:center}
+.daynav .t small{display:block;font:400 14px/1.4 var(--body);color:var(--fog)}
+.field{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.field label,.field .lab{font-weight:700}
+.hint{display:block;font-weight:400;color:var(--fog);font-size:14px}
+.field input[type=text],.field input[type=number],.field input[inputmode]{width:120px;min-height:46px;border-radius:10px;border:1px solid var(--line-2);
+  background:var(--deep);padding:0 12px;text-align:right;font-size:18px}
+.toggle{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:0;border-top:1px solid var(--line);padding:12px 0;text-align:left}
+.toggle .tick{width:30px;height:30px}
+.toggle .tick svg{width:16px;height:16px}
+.seg-wrap{padding:12px 0;border-top:1px solid var(--line)}
+.seg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:8px}
+.seg button{min-height:48px;border-radius:10px;border:1px solid var(--line-2);background:var(--deep);font:800 22px/1 var(--display)}
+.seg button[aria-checked=true]{background:var(--flood);border-color:var(--flood);color:var(--deep)}
+.seg-labels{display:flex;justify-content:space-between;color:var(--fog);font-size:13px;margin-top:6px}
+textarea{width:100%;min-height:80px;border-radius:10px;border:1px solid var(--line-2);background:var(--deep);padding:10px 12px;margin-top:8px;resize:vertical}
+.savebar{position:sticky;bottom:calc(var(--tabs-h) + env(safe-area-inset-bottom) + 10px);margin-top:18px}
+
+/* player card */
+.card{position:relative;margin:12px auto 0;max-width:340px;border-radius:22px;padding:22px 22px 20px;background:
+  linear-gradient(160deg,var(--tier-a) 0%,var(--tier-b) 100%);color:#10202D;overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,.35)}
+.card::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,rgba(255,255,255,.07) 0 24px,transparent 24px 48px);pointer-events:none}
+.card .ovr{font:800 82px/.8 var(--display)}
+.card .tier{font:700 18px/1 var(--display);margin-top:6px}
+.card .nm{font:800 34px/1 var(--display);margin:18px 0 2px;position:relative;z-index:1}
+.card .club{font-size:14px;opacity:.75;position:relative;z-index:1}
+.card .head{display:flex;justify-content:space-between;align-items:flex-start;position:relative;z-index:1}
+.card .crest{width:58px;height:58px}
+.attrs{display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;margin-top:18px;position:relative;z-index:1}
+.attr{display:flex;align-items:baseline;gap:8px;border-top:1px solid rgba(16,32,45,.25);padding-top:6px}
+.attr b{font:800 30px/1 var(--display);min-width:38px}
+.attr span{font-size:15px;font-weight:700}
+.card.bronze{--tier-a:#E3A87C;--tier-b:#9C5E3A}
+.card.silver{--tier-a:#E6EBEF;--tier-b:#8D9BA6}
+.card.gold{--tier-a:#FFE08A;--tier-b:#C99A2E}
+.explain{margin-top:22px}
+.explain summary{cursor:pointer;font-weight:700;color:var(--flood)}
+.explain dl{margin:10px 0 0}
+.explain dt{font-weight:700;margin-top:10px}
+.explain dd{margin:2px 0 0;color:var(--fog);font-size:15px}
+
+/* season */
+.ladder{list-style:none;margin:0;padding:0}
+.ladder li{display:grid;grid-template-columns:1fr auto;gap:2px 12px;padding:12px 0 12px 14px;border-top:1px solid var(--line);position:relative}
+.ladder li:last-child{border-bottom:1px solid var(--line)}
+.ladder li.now::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:4px;border-radius:2px;background:var(--flood)}
+.ladder .n{font:700 22px/1.1 var(--display)}
+.ladder .pts{font:700 22px/1.1 var(--display);text-align:right}
+.ladder .d,.ladder .st{color:var(--fog);font-size:14px}
+.ladder .st{text-align:right}
+.ladder li.done .st{color:var(--turf)}
+.wall{display:grid;grid-template-columns:repeat(13,1fr);gap:5px;margin-top:8px}
+.wall button{aspect-ratio:1;border-radius:5px;border:0;padding:0;background:var(--panel)}
+.wall button.f{background:transparent;border:1px solid var(--line)}
+.wall button.c{outline:2px solid var(--flood);outline-offset:1px}
+.wall button[aria-pressed=true]{box-shadow:0 0 0 2px var(--chalk) inset}
+.wall-note{min-height:44px;margin-top:10px;color:#C9D3DA;font-size:15px}
+.key{display:flex;align-items:center;gap:6px;color:var(--fog);font-size:13px;margin-top:6px}
+.key i{width:12px;height:12px;border-radius:3px;display:inline-block}
+.trophy{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-top:1px solid var(--line)}
+.trophy:last-child{border-bottom:1px solid var(--line)}
+.trophy svg{width:28px;height:28px;flex:none;margin-top:2px}
+.trophy.locked{opacity:.55}
+.trophy .tn{font-weight:700}
+.trophy .th{color:var(--fog);font-size:14px}
+.chip{display:inline-block;min-width:30px;text-align:center;padding:4px 8px;border-radius:8px;font:800 17px/1 var(--display);color:var(--deep)}
+.chip.W{background:var(--turf)} .chip.D{background:var(--draw)} .chip.L{background:var(--brick)}
+
+/* settings */
+.set label{display:block;font-weight:700;margin-top:16px}
+.set input{width:100%;min-height:48px;border-radius:10px;border:1px solid var(--line-2);background:var(--deep);padding:0 12px;margin-top:6px}
+.set p{color:var(--fog);font-size:15px}
+.row-btns{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+
+/* tabs */
+.tabs{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);height:calc(var(--tabs-h) + env(safe-area-inset-bottom));
+  padding-bottom:env(safe-area-inset-bottom);background:rgba(8,21,33,.94);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-top:1px solid var(--line);z-index:5}
+.tabs button{background:none;border:0;color:var(--fog);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:12px;position:relative}
+.tabs svg{width:24px;height:24px}
+.tabs button[aria-current=page]{color:var(--flood)}
+.tabs button[aria-current=page]::before{content:"";position:absolute;top:0;left:30%;right:30%;height:2px;background:var(--flood);border-radius:0 0 2px 2px}
+
+/* session sheet */
+.sheet{position:fixed;inset:0;z-index:10;background:var(--night);overflow:auto;padding:env(safe-area-inset-top) 0 calc(24px + env(safe-area-inset-bottom));
+  transform:translateY(100%);transition:transform .28s cubic-bezier(.2,.8,.2,1);visibility:hidden}
+.sheet.open{transform:none;visibility:visible}
+.sheet-head{display:flex;justify-content:space-between;align-items:center;padding:16px 20px 0;max-width:560px;margin:0 auto}
+.sheet-head button{background:none;border:0;color:var(--fog);padding:8px;margin:-8px}
+.sheet h3{font:800 34px/1 var(--display);margin:10px 0 4px}
+.energy{display:grid;gap:8px;margin-top:16px}
+.energy button{display:flex;align-items:center;gap:14px;min-height:60px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel);padding:0 16px;text-align:left}
+.energy b{font:800 30px/1 var(--display);width:24px;color:var(--flood)}
+.size{display:inline-block;margin-top:14px;padding:6px 12px;border-radius:999px;background:var(--flood-dim);color:var(--flood);font-weight:700}
+.ex{border-top:1px solid var(--line);padding:12px 0}
+.ex:last-of-type{border-bottom:1px solid var(--line)}
+.ex-top{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.ex-name{font-weight:700}
+.ex-rx{font:700 20px/1 var(--display);color:var(--flood);white-space:nowrap}
+.ex-prog{color:var(--fog);font-size:14px;margin-top:2px}
+.sets{display:grid;gap:6px;margin-top:10px}
+.setrow{display:grid;grid-template-columns:44px 1fr 1fr 1fr;gap:6px;align-items:center}
+.setrow span{color:var(--fog);font-size:14px}
+.setrow input{min-height:42px;border-radius:9px;border:1px solid var(--line-2);background:var(--deep);padding:0 8px;text-align:center;width:100%}
+.sethead{display:grid;grid-template-columns:44px 1fr 1fr 1fr;gap:6px;color:var(--fog);font-size:12px;text-align:center}
+.results{display:grid;gap:8px;margin-top:16px}
+.results .btn{justify-content:flex-start;padding:0 16px}
+.results .btn small{font-weight:400;opacity:.8;margin-left:auto}
+
+.toast{position:fixed;left:50%;bottom:calc(var(--tabs-h) + env(safe-area-inset-bottom) + 14px);transform:translateX(-50%) translateY(20px);
+  background:var(--chalk);color:var(--deep);font-weight:700;padding:12px 18px;border-radius:12px;opacity:0;pointer-events:none;transition:.22s;z-index:20;max-width:88vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.empty{padding:40px 0;text-align:left}
+.empty h2{margin-top:0}
+.flag{margin-top:16px;padding:12px 14px;border-radius:12px;border:1px solid var(--brick);color:var(--chalk);font-size:15px}
+
+@media (prefers-reduced-motion:reduce){.sheet,.toast{transition:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div>
+    <p class="brand">The Season</p>
+    <p class="sub" id="subtitle">&nbsp;</p>
+  </div>
+  <button class="gear" id="gear" aria-label="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+</header>
+<p class="status" id="status" aria-live="polite"></p>
+
+<main class="wrap">
+  <section id="v-matchday" class="view"></section>
+  <section id="v-log" class="view" hidden></section>
+  <section id="v-card" class="view" hidden></section>
+  <section id="v-season" class="view" hidden></section>
+  <section id="v-settings" class="view" hidden></section>
+</main>
+
+<nav class="tabs" aria-label="Sections">
+  <button data-view="matchday" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 5v14"/><circle cx="12" cy="12" r="2.6"/></svg>Matchday</button>
+  <button data-view="log"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 2.5v3M16 2.5v3M4 9h16M8 13h4M8 17h7"/></svg>Today</button>
+  <button data-view="card"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 3h12v14l-6 4-6-4z"/><path d="M9 9h6M9 13h6"/></svg>Card</button>
+  <button data-view="season"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20h16M6 20v-6M10 20V10M14 20V7M18 20V4"/></svg>Season</button>
+</nav>
+
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+  <div class="sheet-head"><span class="muted small" id="sheet-crumb"></span><button id="sheet-close">Close</button></div>
+  <div class="wrap" id="sheet-body"></div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+'use strict';
+/* ---------- storage and state ---------- */
+const LS = {
+  get(k, d){ try{ const v = localStorage.getItem('season.'+k); return v ? JSON.parse(v) : d; }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem('season.'+k, JSON.stringify(v)); }catch(e){} }
+};
+const state = {
+  cfg: LS.get('cfg', {url:'', token:'', name:''}),
+  data: LS.get('data', null),
+  queue: LS.get('queue', []),
+  view: 'matchday',
+  logDate: null,
+  wallPick: null,
+  syncing: false,
+  lastError: '',
+  counted: false
+};
+
+/* ---------- small helpers ---------- */
+const $ = s => document.querySelector(s);
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pad = n => String(n).padStart(2,'0');
+const isoOf = d => d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const todayISO = () => isoOf(new Date());
+const dateOf = iso => { const [y,m,d] = iso.split('-').map(Number); return new Date(y, m-1, d); };
+const addDays = (iso, n) => { const d = dateOf(iso); d.setDate(d.getDate()+n); return isoOf(d); };
+const daysBetween = (a, b) => Math.round((dateOf(b) - dateOf(a)) / 864e5);
+const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTH = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const fmtDay = iso => { const d = dateOf(iso); return DOW[d.getDay()]+' '+d.getDate()+' '+MON[d.getMonth()]; };
+const fmtLong = iso => { const d = dateOf(iso); return d.getDate()+' '+MONTH[d.getMonth()]; };
+const num = v => (v === '' || v === null || v === undefined || isNaN(Number(v))) ? null : Number(v);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fmt1 = v => (Math.round(v*10)/10).toFixed(1);
+const signed1 = v => (v > 0 ? '+' : v < 0 ? '−' : '') + fmt1(Math.abs(v));
+const tickSvg = '<svg viewBox="0 0 16 16" fill="none" stroke="#081521" stroke-width="2.4"><path d="M3 8.5l3.2 3L13 4.5"/></svg>';
+
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 2600); }
+
+/* ---------- data access ---------- */
+const D = () => state.data;
+const S = () => (D() && D().settings) || {};
+function dayRow(iso){ return D() ? D().daily.find(r => r.date === iso) : null; }
+function kickoff(){ return S().kickoff || '2026-11-30'; }
+function weekNo(iso){ const k = kickoff(); if (iso < k) return 0; return clamp(Math.floor(daysBetween(k, iso)/7)+1, 1, 52); }
+function results(){ return (D() ? D().fixtures : []).filter(f => f.result); }
+function nextFixture(){ const t = todayISO(); return (D() ? D().fixtures : []).filter(f => f.date >= t && !f.result).sort((a,b) => a.date < b.date ? -1 : 1)[0]; }
+function workoutOf(session){ const m = /Workout ([AB])/.exec(session||''); return m ? m[1] : null; }
+
+/* ---------- API ---------- */
+async function api(method, payload){
+  const c = state.cfg;
+  if (!c.url || !c.token) throw new Error('not-configured');
+  let res;
+  if (method === 'GET') res = await fetch(c.url + (c.url.includes('?') ? '&' : '?') + 'token=' + encodeURIComponent(c.token), {cache:'no-store'});
+  else res = await fetch(c.url, {method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(Object.assign({token:c.token}, payload))});
+  if (!res.ok) throw new Error('The sheet replied with status ' + res.status);
+  const j = await res.json();
+  if (!j.ok) { const e = new Error(j.error || 'The sheet refused the request.'); e.fatal = true; throw e; }
+  return j.data;
+}
+function setData(d){ state.data = d; LS.set('data', d); }
+async function refresh(quiet){
+  if (!state.cfg.url) { render(); return; }
+  state.syncing = true; status();
+  try { await flushQueue(); setData(await api('GET')); state.lastError = ''; }
+  catch(e){ state.lastError = e.message === 'not-configured' ? '' : (e.fatal ? e.message : 'offline'); }
+  state.syncing = false; render();
+  if (!quiet && state.lastError && state.lastError !== 'offline') toast(state.lastError);
+}
+async function send(payload, okMsg){
+  try { setData(await api('POST', payload)); state.lastError=''; render(); toast(okMsg); return true; }
+  catch(e){
+    if (e.fatal) { toast(e.message); return false; }
+    state.queue.push(payload); LS.set('queue', state.queue); applyLocal(payload); render();
+    toast('Saved on this phone. It will sync when you are back online.'); return true;
+  }
+}
+async function flushQueue(){
+  while (state.queue.length){
+    const p = state.queue[0];
+    setData(await api('POST', p));
+    state.queue.shift(); LS.set('queue', state.queue);
+  }
+}
+function applyLocal(p){
+  if (!D()) return;
+  if (p.action === 'day'){ const r = dayRow(p.date); if (r) Object.assign(r, p.fields); }
+  if (p.action === 'fixture'){ const f = D().fixtures.find(x => x.row === p.row); if (f){ f.energy = p.energy; f.result = p.result; f.points = p.result === 'W' ? 3 : p.result === 'D' ? 1 : 0; } }
+  LS.set('data', D());
+}
+
+/* ---------- status line ---------- */
+function status(){
+  const el = $('#status'); el.classList.remove('warn');
+  if (!state.cfg.url) { el.textContent = ''; return; }
+  if (state.syncing) { el.textContent = 'Syncing with your sheet'; return; }
+  const q = state.queue.length;
+  if (state.lastError === 'offline') { el.classList.add('warn'); el.textContent = 'Offline. Showing what was last synced' + (q ? ', with ' + q + ' change' + (q>1?'s':'') + ' waiting.' : '.'); return; }
+  if (D() && D().fetchedAt){ const m = Math.round((Date.now() - Date.parse(D().fetchedAt))/60000); el.textContent = 'Synced ' + (m < 1 ? 'just now' : m < 60 ? m + ' min ago' : Math.round(m/60) + ' h ago'); }
+}
+
+/* ---------- views ---------- */
+function show(view){
+  state.view = view;
+  document.querySelectorAll('.view').forEach(v => v.hidden = v.id !== 'v-'+view);
+  document.querySelectorAll('.tabs button').forEach(b => { if (b.dataset.view === view) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
+  render(); window.scrollTo(0,0);
+}
+function render(){
+  status(); subtitle();
+  const v = state.view;
+  if (v === 'settings') return renderSettings();
+  if (!state.cfg.url || !state.cfg.token) return renderConnect();
+  if (!D()) { $('#v-'+v).innerHTML = '<div class="empty"><h2>Fetching your season</h2><p class="muted">This takes a few seconds the first time.</p></div>'; return; }
+  ({matchday:renderMatchday, log:renderLog, card:renderCard, season:renderSeason})[v]();
+}
+function subtitle(){
+  const el = $('#subtitle');
+  if (!D()) { el.innerHTML = '&nbsp;'; return; }
+  const t = todayISO(), k = kickoff();
+  if (t < k) { const n = daysBetween(t, k); el.textContent = 'Kick-off in ' + n + ' day' + (n>1?'s':'') + ', ' + fmtDay(k); return; }
+  const div = D().divisions.rows[D().divisions.currentIndex];
+  el.textContent = (div ? div.name : 'Season') + ', week ' + weekNo(t);
+}
+function renderConnect(){
+  $('#v-'+state.view).innerHTML = '<div class="empty"><h2>Connect your sheet</h2><p class="muted">The app reads and writes The Season: Engine. Open the setup link from the chat, or add the web app address and token in settings.</p><button class="btn" data-go="settings">Open settings</button></div>';
+}
+
+/* Matchday */
+function renderMatchday(){
+  const d = D(), t = todayISO(), k = kickoff();
+  const dv = d.divisions, div = dv.rows[dv.currentIndex] || dv.rows[0];
+  const you = num(div.points) || 0, ghost = num(dv.ghost) || 0, line = num(div.line) || 0;
+  let cap;
+  if (t < k) cap = 'Kick-off is ' + fmtDay(k) + '. Pre-season promotion line: <strong>' + line + ' points</strong> by ' + fmtLong(div.end) + '.';
+  else { const gap = you - ghost;
+    cap = (gap > 0 ? '<strong>' + gap + ' points above</strong> promotion pace.' : gap < 0 ? '<strong>' + (-gap) + ' points below</strong> promotion pace.' : '<strong>Level</strong> with promotion pace.') +
+      ' The line is ' + line + ' by ' + fmtLong(div.end) + '.'; }
+
+  const res = results().sort((a,b) => a.date < b.date ? -1 : 1).slice(-6);
+  const pills = res.map(r => '<span class="pill '+r.result+'" aria-label="'+({W:'Win',D:'Draw',L:'Loss'})[r.result]+'">'+r.result+'</span>').join('') +
+    Array.from({length: 6 - res.length}, () => '<span class="pill empty" aria-hidden="true">–</span>').join('');
+
+  const nf = nextFixture();
+  const next = nf ? fixtureRow(nf, true) : '<p class="muted">No sessions scheduled. The next block is added from the sheet.</p>';
+
+  const row = dayRow(t), st = S();
+  const steps = row ? num(row.steps) : null;
+  const basics = [
+    ['Weigh in', row && num(row.weight) !== null, row && num(row.weight) !== null ? fmt1(row.weight) + ' kg' : ''],
+    ['Steps or evening walk', row && (row.walk === true || (steps !== null && steps >= (num(st.stepTarget)||6000))), row ? (row.walk === true ? 'Walk done' : steps !== null ? steps.toLocaleString('en-GB') + ' steps' : '') : ''],
+    ['Protein target', row && row.protein === true, st.proteinTarget ? st.proteinTarget + ' g' : ''],
+    ['In bed by ' + (st.bedBy || '23:00'), row && row.bed === true, ''],
+    ['Mood and energy', row && num(row.mood) !== null && num(row.energy) !== null, row && num(row.mood) !== null ? 'Mood ' + row.mood + ', energy ' + (row.energy || '–') : '']
+  ];
+  const hit = basics.slice(1).filter(b => b[1]).length;
+
+  const trendRows = d.daily.filter(r => r.date <= t && num(r.trend) !== null);
+  const last = trendRows[trendRows.length - 1];
+  const weekAgo = last ? trendRows.find(r => r.date === addDays(last.date, -7)) : null;
+  const goal = num(st.goalWeight), startW = num(st.startWeight);
+  const toGo = last && goal ? num(last.trend) - goal : (startW && goal ? startW - goal : null);
+
+  const flag = moodFlag();
+
+  $('#v-matchday').innerHTML =
+    '<div class="board" aria-label="Points this division: you '+you+', promotion pace '+ghost+'">' +
+      '<div class="board-row"><div class="side"><span class="who">You</span><span class="num" data-n="'+you+'">'+you+'</span></div>' +
+      '<span class="colon" aria-hidden="true">:</span>' +
+      '<div class="side right"><span class="who">Promotion pace</span><span class="num" data-n="'+ghost+'">'+ghost+'</span></div></div>' +
+      '<p class="board-cap">'+cap+'</p></div>' +
+    '<h2>Form</h2><div class="form">'+pills+'</div>' +
+    '<h2>Next session</h2>' + next +
+    (t < k ? '<h2>Today</h2><p class="muted">The daily basics start on kick-off day: weigh in, steps or an evening walk, the protein target, bed on time, and a two-tap mood and energy check. Three of the four earns a point.</p>' :
+    '<h2>Today</h2><ul class="basics">' + basics.map(b => '<li><span class="tick'+(b[1]?' on':'')+'">'+tickSvg+'</span><span>'+esc(b[0])+'</span><span class="val">'+esc(b[2])+'</span></li>').join('') + '</ul>' +
+    '<p class="small muted" style="margin:10px 0 12px">'+hit+' of 4 basics today. Three earns the training-ground point.</p>' +
+    '<button class="btn wide" data-go="log">Log today</button>') +
+    (flag ? '<div class="flag">'+flag+'</div>' : '') +
+    '<h2>Weight</h2><div class="stats">' +
+      '<div class="stat"><div class="v">'+(last ? fmt1(last.trend) : (startW ? fmt1(startW) : '–'))+'</div><div class="l">'+(last ? 'Trend, kg' : 'Start, kg')+'</div></div>' +
+      '<div class="stat"><div class="v">'+(last && weekAgo && num(weekAgo.trend) !== null ? signed1(num(last.trend) - num(weekAgo.trend)) : '–')+'</div><div class="l">This week, kg</div></div>' +
+      '<div class="stat"><div class="v">'+(toGo !== null ? fmt1(toGo) : '–')+'</div><div class="l">To goal, kg</div></div></div>' +
+    sparkline(trendRows.slice(-60));
+  countUp();
+}
+function moodFlag(){
+  const t = todayISO(), from = addDays(t, -13);
+  const rows = D().daily.filter(r => r.date >= from && r.date <= t && num(r.mood) !== null);
+  if (rows.length < 10) return '';
+  const avg = rows.reduce((s,r) => s + num(r.mood), 0) / rows.length;
+  const floor = num(S().moodFloor) || 2.5;
+  return avg < floor ? 'Your mood has averaged ' + fmt1(avg) + ' over two weeks. That is worth a conversation with your GP, or you can refer yourself to NHS Talking Therapies.' : '';
+}
+function sparkline(rows){
+  if (rows.length < 2) return '<p class="small muted" style="margin-top:10px">The trend line appears after a few days of weigh-ins.</p>';
+  const vals = rows.map(r => num(r.trend)), lo = Math.min(...vals), hi = Math.max(...vals), span = (hi - lo) || 1;
+  const w = 320, h = 64, pts = vals.map((v,i) => (i/(vals.length-1)*w).toFixed(1)+','+(6 + (1-(v-lo)/span)*(h-12)).toFixed(1)).join(' ');
+  return '<svg class="spark" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none" role="img" aria-label="Trend weight over the last '+rows.length+' days"><polyline points="'+pts+'" fill="none" stroke="#FFB547" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/></svg>';
+}
+function countUp(){
+  if (state.counted || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  state.counted = true;
+  document.querySelectorAll('.board .num').forEach(el => {
+    const n = Number(el.dataset.n) || 0; if (!n) return;
+    const t0 = performance.now(), dur = 900;
+    const step = now => { const p = Math.min(1, (now - t0)/dur), e = 1 - Math.pow(1-p, 3); el.textContent = Math.round(n*e); if (p < 1) requestAnimationFrame(step); };
+    el.textContent = '0'; requestAnimationFrame(step);
+  });
+}
+function fixtureRow(f, primary){
+  const d = dateOf(f.date);
+  const isToday = f.date === todayISO();
+  const meta = f.result ? '<span class="chip '+f.result+'">'+f.result+'</span> <span class="muted small">'+(f.size ? esc(f.size)+', ' : '')+(num(f.points) !== null ? f.points+' pts' : '')+'</span>' :
+    '<span class="meta">'+(isToday ? 'Today' : fmtDay(f.date))+(workoutOf(f.session) ? ', The Gym Group' : '')+'</span>';
+  const act = f.result ? '' : '<div class="act"><button class="btn small'+(primary?'':' ghost')+'" data-fixture="'+f.row+'">'+(f.date > todayISO() ? 'Preview session' : 'Start session')+'</button></div>';
+  return '<div class="fixture"><div class="datebox"><div class="m">'+DOW[d.getDay()]+'</div><div class="d">'+d.getDate()+'</div><div class="m">'+MON[d.getMonth()]+'</div></div>' +
+    '<div><div class="what">'+esc(f.session)+'</div>'+meta+act+'</div></div>';
+}
+
+/* Log */
+function renderLog(){
+  const t = todayISO(), k = kickoff();
+  if (t < k) { $('#v-log').innerHTML = '<div class="empty"><h2>Logging opens on kick-off day</h2><p class="muted">Your first day to log is '+fmtDay(k)+'. Until then, have a look at the first sessions on the Season tab, and do your first shop from Saturday\'s meal plan.</p><button class="btn ghost" data-view="season">See the sessions</button></div>'; return; }
+  if (!state.logDate) state.logDate = t;
+  const iso = state.logDate, r = dayRow(iso) || {}, st = S();
+  const minDate = k, maxDate = t;
+  const showCal = D().divisions.rows[1] && iso >= D().divisions.rows[1].start;
+  const tog = (key, label, hint) => '<button type="button" class="toggle" data-toggle="'+key+'" aria-pressed="'+(r[key] === true)+'"><span><span class="lab">'+label+'</span>'+(hint?'<span class="hint">'+hint+'</span>':'')+'</span><span class="tick'+(r[key]===true?' on':'')+'">'+tickSvg+'</span></button>';
+  const seg = (key, label, lo, hi) => '<div class="seg-wrap"><span class="lab" style="font-weight:700">'+label+'</span><div class="seg" role="radiogroup" aria-label="'+label+'">' +
+    [1,2,3,4,5].map(n => '<button type="button" role="radio" data-seg="'+key+'" data-v="'+n+'" aria-checked="'+(num(r[key])===n)+'">'+n+'</button>').join('') +
+    '</div><div class="seg-labels"><span>'+lo+'</span><span>'+hi+'</span></div></div>';
+  $('#v-log').innerHTML =
+    '<div class="daynav"><button data-day="-1" aria-label="Previous day" '+(iso <= minDate ? 'disabled' : '')+'><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></button>' +
+      '<div class="t">'+(iso === t ? 'Today' : fmtDay(iso))+'<small>'+(iso === t ? fmtDay(iso) + ', ' : '')+'week '+weekNo(iso)+'</small></div>' +
+      '<button data-day="1" aria-label="Next day" '+(iso >= maxDate ? 'disabled' : '')+'><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg></button></div>' +
+    '<form id="dayform" autocomplete="off">' +
+      '<div class="field"><label for="f-weight">Weight<span class="hint">kg, first thing</span></label><input id="f-weight" name="weight" inputmode="decimal" value="'+(num(r.weight)!==null?esc(r.weight):'')+'" placeholder="–"></div>' +
+      '<div class="field"><label for="f-steps">Steps<span class="hint">From the Health app. Target '+(num(st.stepTarget)||6000).toLocaleString('en-GB')+'</span></label><input id="f-steps" name="steps" inputmode="numeric" value="'+(num(r.steps)!==null?esc(r.steps):'')+'" placeholder="–"></div>' +
+      tog('walk', 'Evening walk', '30 to 45 minutes after work') +
+      tog('protein', 'Protein target hit', st.proteinTarget ? st.proteinTarget + ' g' : 'Set a goal weight in the sheet') +
+      tog('bed', 'In bed on time', 'By ' + (st.bedBy || '23:00')) +
+      tog('cooked', 'Cooked dinner at home', '') +
+      seg('mood', 'Mood', 'Very low', 'Very good') +
+      seg('energy', 'Energy', 'Empty', 'Sharp') +
+      '<div class="field"><label for="f-spend">Food spend<span class="hint">£ today. Budget £'+(num(st.foodBudget)||70)+' a week</span></label><input id="f-spend" name="spend" inputmode="decimal" value="'+(num(r.spend)!==null?esc(r.spend):'')+'" placeholder="–"></div>' +
+      (showCal ? '<div class="field"><label for="f-cal">Calories<span class="hint">For the maintenance model</span></label><input id="f-cal" name="calories" inputmode="numeric" value="'+(num(r.calories)!==null?esc(r.calories):'')+'" placeholder="–"></div>' : '') +
+      '<div class="field" style="display:block"><label for="f-notes">Notes</label><textarea id="f-notes" name="notes" placeholder="Anything worth remembering about today">'+esc(r.notes||'')+'</textarea></div>' +
+      '<div class="savebar"><button class="btn wide" type="submit">Save day</button></div>' +
+    '</form>';
+  state.draft = {walk: r.walk === true, protein: r.protein === true, bed: r.bed === true, cooked: r.cooked === true, mood: num(r.mood), energy: num(r.energy)};
+}
+async function saveDay(form){
+  const f = new FormData(form), dr = state.draft;
+  const clean = v => { v = String(v||'').trim().replace(',', '.'); return v === '' ? '' : Number(v); };
+  const fields = { weight: clean(f.get('weight')), steps: clean(f.get('steps')), spend: clean(f.get('spend')), notes: String(f.get('notes')||'').trim(),
+    walk: dr.walk, protein: dr.protein, bed: dr.bed, cooked: dr.cooked, mood: dr.mood || '', energy: dr.energy || '' };
+  if (f.has('calories')) fields.calories = clean(f.get('calories'));
+  for (const k of ['weight','steps','spend','calories']) if (fields[k] !== '' && fields[k] !== undefined && isNaN(fields[k])) { toast('Check the ' + k + ' value: numbers only.'); return; }
+  if (fields.weight !== '' && (fields.weight < 40 || fields.weight > 250)) { toast('That weight looks wrong. Enter it in kg.'); return; }
+  const btn = form.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Saving';
+  await send({action:'day', date: state.logDate, fields}, 'Day saved');
+}
+
+/* Player card */
+function ratings(){
+  const d = D(), t = todayISO(), k = kickoff();
+  const from14 = addDays(t, -13) < k ? k : addDays(t, -13);
+  const win = d.daily.filter(r => r.date >= from14 && r.date <= t);
+  const days = Math.max(win.length, 0);
+  const count = key => win.filter(r => r[key] === true).length;
+  const steps = win.map(r => num(r.steps)).filter(v => v !== null);
+  const moods = win.map(r => num(r.mood)).filter(v => v !== null);
+  const out = {};
+  out.Engine = steps.length ? clamp(Math.round(40 + (steps.reduce((a,b)=>a+b,0)/steps.length - 4000)/8000*50 + Math.min(8, count('walk'))), 1, 99) : 40;
+  // strength: progress of best recent estimated max against the first one logged, per exercise
+  const lifts = d.lifts.filter(l => num(l.e1rm) !== null);
+  const byEx = {};
+  lifts.forEach(l => { (byEx[l.exercise] = byEx[l.exercise] || []).push(l); });
+  const prog = Object.values(byEx).map(ls => { ls.sort((a,b) => a.date < b.date ? -1 : 1); const first = num(ls[0].e1rm); const best = Math.max(...ls.map(l => num(l.e1rm))); return first ? best/first - 1 : 0; });
+  out.Strength = prog.length ? clamp(Math.round(50 + prog.reduce((a,b)=>a+b,0)/prog.length*100), 1, 99) : 50;
+  out.Fuel = days ? clamp(Math.round(30 + 69*(0.6*count('protein')/days + 0.4*count('cooked')/days)), 1, 99) : 40;
+  out.Recovery = days ? clamp(Math.round(30 + 69*count('bed')/days), 1, 99) : 40;
+  out.Mind = moods.length ? clamp(Math.round(20 + (moods.reduce((a,b)=>a+b,0)/moods.length - 1)*19.75), 1, 99) : 50;
+  const from28 = addDays(t, -27);
+  const fx = d.fixtures.filter(f => f.date >= from28 && (f.date < t || (f.date === t && f.result)));
+  out.Discipline = fx.length ? clamp(Math.round(30 + 69*fx.reduce((s,f) => s + (f.result === 'W' ? 1 : f.result === 'D' ? .6 : 0), 0)/fx.length), 1, 99) : 40;
+  const overall = Math.round(Object.values(out).reduce((a,b)=>a+b,0)/6);
+  return {attrs: out, overall, tier: overall >= 75 ? 'gold' : overall >= 60 ? 'silver' : 'bronze'};
+}
+function renderCard(){
+  const r = ratings(), name = state.cfg.name || 'Your name';
+  const order = ['Engine','Strength','Fuel','Recovery','Mind','Discipline'];
+  const div = D().divisions.rows[D().divisions.currentIndex];
+  $('#v-card').innerHTML =
+    '<div class="card '+r.tier+'" role="img" aria-label="Player card: overall '+r.overall+', '+r.tier+'">' +
+      '<div class="head"><div><div class="ovr">'+r.overall+'</div><div class="tier">'+r.tier[0].toUpperCase()+r.tier.slice(1)+'</div></div>' + crest() + '</div>' +
+      '<div class="nm">'+esc(name)+'</div><div class="club">'+(div ? esc(div.name) : '')+', season 2026/27</div>' +
+      '<div class="attrs">' + order.map(k => '<div class="attr"><b>'+r.attrs[k]+'</b><span>'+k+'</span></div>').join('') + '</div></div>' +
+    '<p class="small muted" style="text-align:center;margin-top:14px">Silver from an overall of 60, gold from 75. Ratings move with the last two to four weeks.</p>' +
+    '<details class="explain"><summary>How the ratings are worked out</summary><dl>' +
+      '<dt>Engine</dt><dd>Average daily steps over 14 days: 4,000 steps is 40, 12,000 is 90. Each evening walk adds a point, up to 8.</dd>' +
+      '<dt>Strength</dt><dd>How far your best estimated maximum on each lift has moved since you first logged it. 50 is where you start; every 1% of progress adds a point.</dd>' +
+      '<dt>Fuel</dt><dd>Share of the last 14 days with the protein target hit (60%) and dinner cooked at home (40%).</dd>' +
+      '<dt>Recovery</dt><dd>Share of the last 14 days in bed on time.</dd>' +
+      '<dt>Mind</dt><dd>Average mood over 14 days: 1 is 20, 5 is 99.</dd>' +
+      '<dt>Discipline</dt><dd>Sessions over the last four weeks: a win counts in full, a draw 60%, a missed session nothing.</dd>' +
+    '</dl></details>' +
+    '<p class="small muted">The name on the card is set in settings.</p>';
+}
+function crest(){
+  return '<svg class="crest" viewBox="0 0 64 64" aria-hidden="true"><path d="M32 3l25 8v19c0 15-11 26-25 31C18 56 7 45 7 30V11z" fill="rgba(16,32,45,.88)"/><circle cx="32" cy="31" r="11" fill="none" stroke="#FFB547" stroke-width="3"/><path d="M12 31h40" stroke="#FFB547" stroke-width="3"/><circle cx="32" cy="31" r="2.6" fill="#FFB547"/></svg>';
+}
+
+/* Season */
+function weekPoints(){
+  const d = D(), k = kickoff(), weeks = [];
+  for (let w = 1; w <= 52; w++){
+    const s = addDays(k, (w-1)*7), e = addDays(s, 6);
+    const fx = d.fixtures.filter(f => f.date >= s && f.date <= e);
+    const fp = fx.reduce((a,f) => a + (num(f.points) || 0), 0);
+    const tg = d.daily.filter(r => r.date >= s && r.date <= e).reduce((a,r) => a + (num(r.tg) || 0), 0);
+    const max = fx.length*3 + 7;
+    weeks.push({w, s, e, pts: fp + tg, max, fx: fx.length, played: fx.filter(f => f.result).length});
+  }
+  return weeks;
+}
+function renderSeason(){
+  const d = D(), t = todayISO(), dv = d.divisions;
+  const ladder = dv.rows.map((r, i) => ({r, i})).reverse().map(({r, i}) => {
+    const now = i === dv.currentIndex && t >= kickoff();
+    const done = /Promoted|Champions/.test(r.status);
+    return '<li class="'+(now?'now ':'')+(done?'done':'')+'"><span class="n">'+esc(r.name)+'</span><span class="pts">'+(t >= r.start ? (num(r.points)||0) + ' / ' : '')+r.line+'</span>' +
+      '<span class="d">'+fmtDay(r.start)+' to '+fmtDay(r.end)+'</span><span class="st">'+esc(r.status)+'</span></li>';
+  }).join('');
+  const weeks = weekPoints(), cw = weekNo(t);
+  const wall = weeks.map(x => {
+    const future = x.s > t; let bg = '';
+    if (!future){ const share = x.max ? x.pts/x.max : 0;
+      bg = share >= .8 ? '#53B475' : share >= .6 ? '#3F8C5C' : share >= .4 ? '#2E6248' : share > 0 ? '#244A3E' : '#1A3346'; }
+    return '<button class="'+(future?'f ':'')+(x.w===cw && t >= kickoff()?'c':'')+'" data-week="'+x.w+'" aria-pressed="'+(state.wallPick===x.w)+'" aria-label="Week '+x.w+'"'+(bg?' style="background:'+bg+'"':'')+'></button>';
+  }).join('');
+  const pick = state.wallPick ? weeks[state.wallPick-1] : null;
+  const note = pick ? 'Week '+pick.w+', '+fmtDay(pick.s)+' to '+fmtDay(pick.e)+': '+(pick.s > t ? 'still to come. ' + pick.fx + ' sessions scheduled.' : pick.pts+' points from a possible '+pick.max+', '+pick.played+' of '+pick.fx+' sessions logged.') : 'Each square is a week. Tap one to see it.';
+
+  const fx = d.fixtures.slice().sort((a,b) => a.date < b.date ? -1 : 1);
+  const thisWeekStart = addDays(t, -((dateOf(t).getDay()+6)%7));
+  const recent = fx.filter(f => f.date >= addDays(thisWeekStart, -7) && f.date <= addDays(thisWeekStart, 6));
+  const tro = d.trophies.slice().sort((a,b) => (b.earned?1:0) - (a.earned?1:0));
+  const cup = (on) => '<svg viewBox="0 0 28 28" fill="none" stroke="'+(on?'#FFB547':'#93A6B5')+'" stroke-width="1.8"><path d="M8 4h12v6a6 6 0 0 1-12 0z"/><path d="M8 6H4v2a4 4 0 0 0 4 4M20 6h4v2a4 4 0 0 1-4 4M14 16v4M9 24h10M11 20h6v4h-6z"/></svg>';
+
+  $('#v-season').innerHTML =
+    '<h2 style="margin-top:12px">The table</h2><ul class="ladder">'+ladder+'</ul>' +
+    '<h2>The year</h2><div class="wall">'+wall+'</div><p class="wall-note">'+note+'</p>' +
+    '<div class="key"><i style="background:#1A3346"></i>No points <i style="background:#2E6248;margin-left:8px"></i>40% <i style="background:#3F8C5C;margin-left:8px"></i>60% <i style="background:#53B475;margin-left:8px"></i>80%+</div>' +
+    '<h2>Sessions</h2>' + (recent.length ? recent.map(f => fixtureRow(f, false)).join('') : '<p class="muted">No sessions in this window.</p>') +
+    '<h2>Trophy room</h2>' + tro.map(x => '<div class="trophy'+(x.earned?'':' locked')+'">'+cup(!!x.earned)+'<div><div class="tn">'+esc(x.name)+'</div><div class="th">'+(x.earned ? 'Won '+fmtDay(x.earned) : esc(x.how))+'</div></div></div>').join('');
+}
+
+/* Settings */
+function renderSettings(){
+  const c = state.cfg, q = state.queue.length;
+  $('#v-settings').innerHTML =
+    '<form class="set" id="setform"><h2 style="margin-top:12px">Settings</h2>' +
+    '<label for="s-name">Name on your player card</label><input id="s-name" name="name" value="'+esc(c.name)+'" autocomplete="name">' +
+    '<label for="s-url">Web app address</label><input id="s-url" name="url" value="'+esc(c.url)+'" inputmode="url" autocapitalize="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec">' +
+    '<label for="s-token">Token</label><input id="s-token" name="token" value="'+esc(c.token)+'" autocapitalize="off" spellcheck="false">' +
+    '<p>Both come from the setup message in the chat. They stay on this phone.</p>' +
+    '<div class="row-btns"><button class="btn" type="submit">Save and sync</button><button class="btn ghost" type="button" data-go="matchday">Back</button></div>' +
+    (q ? '<p>'+q+' change'+(q>1?'s are':' is')+' waiting to sync.</p>' : '') +
+    '</form>';
+}
+
+/* ---------- session sheet ---------- */
+const ENERGY = ['Running on empty','Low','Fine','Good','Sharp'];
+function sizeFor(e){ return e >= 4 ? 'Full' : e >= 2 ? 'Standard' : 'Floor'; }
+function openSession(row){
+  const f = D().fixtures.find(x => x.row === row); if (!f) return;
+  state.sess = {f, energy: num(f.energy), size: null, step: 'energy', sets: {}};
+  if (state.sess.energy) { state.sess.size = sizeFor(state.sess.energy); state.sess.step = 'plan'; }
+  $('#sheet-crumb').textContent = fmtDay(f.date) + ', week ' + f.week;
+  renderSheet(); const sh = $('#sheet'); sh.classList.add('open'); sh.scrollTop = 0;
+  setTimeout(() => { const b = $('#sheet-body button'); if (b) b.focus(); }, 300);
+}
+function closeSheet(){ $('#sheet').classList.remove('open'); state.sess = null; }
+function renderSheet(){
+  const s = state.sess, f = s.f, body = $('#sheet-body');
+  const w = workoutOf(f.session);
+  if (s.step === 'energy'){
+    body.innerHTML = '<h3 id="sheet-title">'+esc(f.session)+'</h3><p class="muted">How is your energy right now? It sets the size of the session.</p>' +
+      '<div class="energy">' + [5,4,3,2,1].map(n => '<button data-energy="'+n+'"><b>'+n+'</b><span>'+ENERGY[n-1]+'<br><span class="small muted">'+sizeFor(n)+' session</span></span></button>').join('') + '</div>';
+    return;
+  }
+  const size = s.size, key = size.toLowerCase();
+  let plan = '';
+  if (w){
+    const ex = D().programme.filter(p => p.workout === w && p[key]);
+    plan = ex.map(p => {
+      const n = Number((/^(\d+)/.exec(String(p[key])) || [0,0])[1]) || 0;
+      const open = s.sets[p.exercise];
+      return '<div class="ex"><div class="ex-top"><span class="ex-name">'+esc(p.exercise)+'</span><span class="ex-rx">'+esc(p[key])+'</span></div>' +
+        '<div class="ex-prog">'+esc(p.progress)+'</div>' +
+        (n ? (open ? '<div class="sethead"><span></span><span>kg</span><span>Reps</span><span>Reps left</span></div><div class="sets">' + open.map((r,i) => '<div class="setrow"><span>Set '+(i+1)+'</span>' +
+          ['weight','reps','rir'].map(k2 => '<input inputmode="decimal" aria-label="Set '+(i+1)+' '+k2+'" data-set="'+esc(p.exercise)+'" data-i="'+i+'" data-k="'+k2+'" value="'+esc(r[k2])+'">').join('') + '</div>').join('') + '</div>'
+          : '<button class="link small" style="margin-top:8px" data-logsets="'+esc(p.exercise)+'" data-n="'+n+'">Log sets</button>') : '') + '</div>';
+    }).join('');
+    if (size === 'Floor') plan += '<p class="small muted" style="margin-top:10px">Or 10 minutes of brisk incline walking on a treadmill. Either counts as a draw.</p>';
+  } else {
+    plan = '<div class="ex"><div class="ex-top"><span class="ex-name">'+esc(size === 'Floor' ? '10-minute walk' : f.session)+'</span></div><div class="ex-prog">'+(size === 'Floor' ? 'Out of the door and back. It still counts.' : 'Easy, steady pace. You should be able to talk.')+'</div></div>';
+  }
+  const suggested = size === 'Floor' ? 'D' : 'W';
+  const future = f.date > todayISO();
+  body.innerHTML = '<h3 id="sheet-title">'+esc(f.session)+'</h3>' +
+    '<span class="size">'+size+' session, energy '+s.energy+'</span> <button class="link small" data-reenergy style="margin-left:8px">Change</button>' +
+    '<div style="margin-top:16px">'+plan+'</div>' +
+    (future ? '<p class="muted" style="margin-top:18px">You can log the result on the day.</p>' :
+    '<h2>Result</h2><div class="results">' +
+      '<button class="btn'+(suggested==='W'?'':' ghost')+'" data-result="W">Win<small>Planned session done, 3 points</small></button>' +
+      '<button class="btn'+(suggested==='D'?'':' ghost')+'" data-result="D">Draw<small>Floor session, 1 point</small></button>' +
+      '<button class="btn ghost" data-result="L">Missed<small>0 points</small></button></div>');
+}
+async function saveResult(result){
+  const s = state.sess, f = s.f;
+  const sets = [];
+  Object.entries(s.sets).forEach(([ex, rows]) => rows.forEach((r, i) => { if (r.weight !== '' || r.reps !== '') sets.push({exercise: ex, set: i+1, weight: r.weight, reps: r.reps, rir: r.rir}); }));
+  closeSheet();
+  const label = {W:'Win recorded, 3 points', D:'Draw recorded, 1 point', L:'Recorded as missed'}[result];
+  if (sets.length) {
+    try { await api('POST', {action:'lifts', date: f.date, session: f.session, sets}); }
+    catch(e){ if (!e.fatal){ state.queue.push({action:'lifts', date: f.date, session: f.session, sets}); LS.set('queue', state.queue); } }
+  }
+  await send({action:'fixture', row: f.row, date: f.date, energy: s.energy, result}, label);
+}
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const b = e.target.closest('button, [data-go]'); if (!b) return;
+  if (b.dataset.view) return show(b.dataset.view);
+  if (b.dataset.go) { if (b.dataset.go === 'log') state.logDate = null; return show(b.dataset.go); }
+  if (b.id === 'gear') return show('settings');
+  if (b.id === 'sheet-close') return closeSheet();
+  if (b.dataset.fixture) return openSession(Number(b.dataset.fixture));
+  if (b.dataset.energy) { const n = Number(b.dataset.energy); Object.assign(state.sess, {energy: n, size: sizeFor(n), step: 'plan'}); return renderSheet(); }
+  if ('reenergy' in b.dataset) { state.sess.step = 'energy'; return renderSheet(); }
+  if (b.dataset.logsets) { state.sess.sets[b.dataset.logsets] = Array.from({length: Number(b.dataset.n)}, () => ({weight:'', reps:'', rir:''})); return renderSheet(); }
+  if (b.dataset.result) return saveResult(b.dataset.result);
+  if (b.dataset.day) { state.logDate = addDays(state.logDate, Number(b.dataset.day)); return renderLog(); }
+  if (b.dataset.toggle) { const k = b.dataset.toggle; state.draft[k] = !state.draft[k]; b.setAttribute('aria-pressed', state.draft[k]); b.querySelector('.tick').classList.toggle('on', state.draft[k]); return; }
+  if (b.dataset.seg) { const k = b.dataset.seg, v = Number(b.dataset.v); state.draft[k] = state.draft[k] === v ? null : v;
+    b.parentElement.querySelectorAll('button').forEach(x => x.setAttribute('aria-checked', Number(x.dataset.v) === state.draft[k])); return; }
+  if (b.dataset.week) { const w = Number(b.dataset.week); state.wallPick = state.wallPick === w ? null : w; return renderSeason(); }
+});
+document.addEventListener('input', e => {
+  const el = e.target; if (!el.dataset.set) return;
+  state.sess.sets[el.dataset.set][Number(el.dataset.i)][el.dataset.k] = el.value.trim().replace(',', '.');
+});
+document.addEventListener('submit', e => {
+  e.preventDefault();
+  if (e.target.id === 'dayform') return saveDay(e.target);
+  if (e.target.id === 'setform') {
+    const f = new FormData(e.target);
+    state.cfg = {name: String(f.get('name')||'').trim(), url: String(f.get('url')||'').trim(), token: String(f.get('token')||'').trim()};
+    LS.set('cfg', state.cfg); toast('Settings saved'); show('matchday'); refresh();
+  }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.sess) closeSheet(); });
+window.addEventListener('online', () => refresh(true));
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && (!D() || Date.now() - Date.parse(D().fetchedAt) > 5*60000)) refresh(true);
+});
+
+/* ---------- start ---------- */
+(function setupFromLink(){
+  const h = location.hash;
+  if (!h.startsWith('#setup')) return;
+  const p = new URLSearchParams(h.slice(h.indexOf('?')+1));
+  if (p.get('url') && p.get('token')) {
+    state.cfg = {url: p.get('url'), token: p.get('token'), name: p.get('name') || state.cfg.name || ''};
+    LS.set('cfg', state.cfg);
+    setTimeout(() => toast('Connected to your sheet'), 400);
+  }
+  history.replaceState(null, '', location.pathname);
+})();
+render();
+refresh(true);
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js');
+</script>
+</body>
+</html>
