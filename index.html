@@ -224,6 +224,45 @@ textarea{width:100%;min-height:80px;border-radius:10px;border:1px solid var(--li
 .empty h2{margin-top:0}
 .flag{margin-top:16px;padding:12px 14px;border-radius:12px;border:1px solid var(--brick);color:var(--chalk);font-size:15px}
 
+/* food log */
+.fuel{margin:8px 0 6px}
+.fuel-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.fuel-num{font:800 44px/1 var(--display)}
+.fuel-num small{font:700 22px/1 var(--display);color:var(--fog)}
+.fuel-kcal{color:var(--fog);font-size:14px;text-align:right}
+.bar{height:10px;border-radius:5px;background:var(--panel);margin-top:10px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--flood);border-radius:5px;transition:width .3s}
+.bar.done i{background:var(--turf)}
+.meal{border-top:1px solid var(--line);padding:10px 0 8px}
+.meal-h{display:flex;justify-content:space-between;align-items:center}
+.meal-h b{font:700 20px/1.2 var(--display)}
+.meal-h .mp{color:var(--fog);font-size:14px;margin-left:8px}
+.meal-h button{background:none;border:1px solid var(--line-2);border-radius:999px;min-height:36px;padding:0 14px;font-size:15px;font-weight:700;color:var(--flood)}
+.entry{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:7px 0}
+.entry .en{font-size:16px}
+.entry .es{color:var(--fog);font-size:13px}
+.entry .ep{font:700 19px/1 var(--display);color:var(--chalk)}
+.entry button{background:none;border:0;color:var(--fog);width:36px;height:36px;display:grid;place-items:center;margin-right:-8px}
+.fsearch{width:100%;min-height:50px;border-radius:12px;border:1px solid var(--line-2);background:var(--deep);padding:0 14px;margin-top:14px;font-size:17px}
+.fgroup{color:var(--fog);font-size:14px;margin:18px 0 4px}
+.food-item{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid var(--line);padding:11px 0}
+.food-item .fn{font-weight:700}
+.food-item .fs{color:var(--fog);font-size:14px}
+.food-item .fp{color:var(--flood);font-weight:700}
+.stepper{display:flex;align-items:center;gap:14px;margin-top:16px}
+.stepper button{width:52px;height:52px;border-radius:12px;border:1px solid var(--line-2);background:var(--panel);font:800 26px/1 var(--display)}
+.stepper .sv{font:800 44px/1 var(--display);min-width:70px;text-align:center}
+.amt input{width:140px;min-height:52px;border-radius:12px;border:1px solid var(--line-2);background:var(--deep);padding:0 12px;font:800 28px/1 var(--display);text-align:center;margin-top:14px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.chips button{min-height:38px;padding:0 14px;border-radius:999px;border:1px solid var(--line-2);background:none;font-size:15px}
+.chips button[aria-pressed=true]{background:var(--flood);border-color:var(--flood);color:var(--deep);font-weight:700}
+.adds{margin-top:16px;font-size:17px}
+.adds b{color:var(--flood)}
+.check{display:flex;align-items:center;gap:10px;margin-top:16px;font-size:16px}
+.check input{width:22px;height:22px;accent-color:var(--flood)}
+.qa label{display:block;font-weight:700;margin-top:14px}
+.qa input{width:100%;min-height:48px;border-radius:10px;border:1px solid var(--line-2);background:var(--deep);padding:0 12px;margin-top:6px}
+.qa .two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 @media (prefers-reduced-motion:reduce){.sheet,.toast{transition:none}}
 </style>
 </head>
@@ -338,6 +377,8 @@ function normalise(d){
   d.divisions.rows.forEach(r => { r.start = normD(r.start); r.end = normD(r.end); });
   d.trophies.forEach(r => r.earned = normD(r.earned));
   d.lifts.forEach(r => r.date = normD(r.date));
+  (d.foodLog || []).forEach(r => r.date = normD(r.date));
+  d.foods = d.foods || []; d.foodLog = d.foodLog || [];
   return d;
 }
 function setData(d){ state.data = normalise(d); LS.set('data', state.data); }
@@ -367,6 +408,7 @@ async function flushQueue(){
 function applyLocal(p){
   if (!D()) return;
   if (p.action === 'day'){ const r = dayRow(p.date); if (r) Object.assign(r, p.fields); }
+  if (p.action === 'food_add'){ D().foodLog.push(Object.assign({row: null, date: p.date}, p.entry)); }
   if (p.action === 'fixture'){ const f = D().fixtures.find(x => x.row === p.row); if (f){ f.energy = p.energy; f.result = p.result; f.points = p.result === 'W' ? 3 : p.result === 'D' ? 1 : 0; } }
   LS.set('data', D());
 }
@@ -432,7 +474,7 @@ function renderMatchday(){
   const basics = [
     ['Weigh in', row && num(row.weight) !== null, row && num(row.weight) !== null ? fmt1(row.weight) + ' kg' : ''],
     ['Steps or evening walk', row && (row.walk === true || (steps !== null && steps >= (num(st.stepTarget)||6000))), row ? (row.walk === true ? 'Walk done' : steps !== null ? steps.toLocaleString('en-GB') + ' steps' : '') : ''],
-    ['Protein target', row && row.protein === true, st.proteinTarget ? st.proteinTarget + ' g' : ''],
+    ['Protein target', row && row.protein === true, (() => { const g = foodTotals(t).protein; return foodTotals(t).n ? Math.round(g) + ' of ' + (st.proteinTarget || '–') + ' g' : (st.proteinTarget ? st.proteinTarget + ' g' : ''); })()],
     ['In bed by ' + (st.bedBy || '23:00'), row && row.bed === true, ''],
     ['Mood and energy', row && num(row.mood) !== null && num(row.energy) !== null, row && num(row.mood) !== null ? 'Mood ' + row.mood + ', energy ' + (row.energy || '–') : '']
   ];
@@ -507,7 +549,7 @@ function renderLog(){
   if (!state.logDate) state.logDate = t;
   const iso = state.logDate, r = dayRow(iso) || {}, st = S();
   const minDate = k, maxDate = t;
-  const showCal = D().divisions.rows[1] && iso >= D().divisions.rows[1].start;
+  const ft = foodTotals(iso);
   const tog = (key, label, hint) => '<button type="button" class="toggle" data-toggle="'+key+'" aria-pressed="'+(r[key] === true)+'"><span><span class="lab">'+label+'</span>'+(hint?'<span class="hint">'+hint+'</span>':'')+'</span><span class="tick'+(r[key]===true?' on':'')+'">'+tickSvg+'</span></button>';
   const seg = (key, label, lo, hi) => '<div class="seg-wrap"><span class="lab" style="font-weight:700">'+label+'</span><div class="seg" role="radiogroup" aria-label="'+label+'">' +
     [1,2,3,4,5].map(n => '<button type="button" role="radio" data-seg="'+key+'" data-v="'+n+'" aria-checked="'+(num(r[key])===n)+'">'+n+'</button>').join('') +
@@ -516,17 +558,19 @@ function renderLog(){
     '<div class="daynav"><button data-day="-1" aria-label="Previous day" '+(iso <= minDate ? 'disabled' : '')+'><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></button>' +
       '<div class="t">'+(iso === t ? 'Today' : fmtDay(iso))+'<small>'+(iso === t ? fmtDay(iso) + ', ' : '')+'week '+weekNo(iso)+'</small></div>' +
       '<button data-day="1" aria-label="Next day" '+(iso >= maxDate ? 'disabled' : '')+'><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 5l7 7-7 7"/></svg></button></div>' +
+    foodSection(iso, ft) +
+    '<h2>The basics</h2>' +
     '<form id="dayform" autocomplete="off">' +
       '<div class="field"><label for="f-weight">Weight<span class="hint">kg, first thing</span></label><input id="f-weight" name="weight" inputmode="decimal" value="'+(num(r.weight)!==null?esc(r.weight):'')+'" placeholder="–"></div>' +
       '<div class="field"><label for="f-steps">Steps<span class="hint">From the Health app. Target '+(num(st.stepTarget)||6000).toLocaleString('en-GB')+'</span></label><input id="f-steps" name="steps" inputmode="numeric" value="'+(num(r.steps)!==null?esc(r.steps):'')+'" placeholder="–"></div>' +
       tog('walk', 'Evening walk', '30 to 45 minutes after work') +
-      tog('protein', 'Protein target hit', st.proteinTarget ? st.proteinTarget + ' g' : 'Set a goal weight in the sheet') +
+      (ft.n ? '<div class="toggle" aria-live="polite"><span><span class="lab">Protein target hit</span><span class="hint">From your food log: '+Math.round(ft.protein)+' of '+(st.proteinTarget||'–')+' g</span></span><span class="tick'+(r.protein===true?' on':'')+'">'+tickSvg+'</span></div>'
+        : tog('protein', 'Protein target hit', 'Ticks itself once your food log reaches ' + (st.proteinTarget || '–') + ' g')) +
       tog('bed', 'In bed on time', 'By ' + (st.bedBy || '23:00')) +
       tog('cooked', 'Cooked dinner at home', '') +
       seg('mood', 'Mood', 'Very low', 'Very good') +
       seg('energy', 'Energy', 'Empty', 'Sharp') +
       '<div class="field"><label for="f-spend">Food spend<span class="hint">£ today. Budget £'+(num(st.foodBudget)||70)+' a week</span></label><input id="f-spend" name="spend" inputmode="decimal" value="'+(num(r.spend)!==null?esc(r.spend):'')+'" placeholder="–"></div>' +
-      (showCal ? '<div class="field"><label for="f-cal">Calories<span class="hint">For the maintenance model</span></label><input id="f-cal" name="calories" inputmode="numeric" value="'+(num(r.calories)!==null?esc(r.calories):'')+'" placeholder="–"></div>' : '') +
       '<div class="field" style="display:block"><label for="f-notes">Notes</label><textarea id="f-notes" name="notes" placeholder="Anything worth remembering about today">'+esc(r.notes||'')+'</textarea></div>' +
       '<div class="savebar"><button class="btn wide" type="submit">Save day</button></div>' +
     '</form>';
@@ -537,11 +581,132 @@ async function saveDay(form){
   const clean = v => { v = String(v||'').trim().replace(',', '.'); return v === '' ? '' : Number(v); };
   const fields = { weight: clean(f.get('weight')), steps: clean(f.get('steps')), spend: clean(f.get('spend')), notes: String(f.get('notes')||'').trim(),
     walk: dr.walk, protein: dr.protein, bed: dr.bed, cooked: dr.cooked, mood: dr.mood || '', energy: dr.energy || '' };
-  if (f.has('calories')) fields.calories = clean(f.get('calories'));
-  for (const k of ['weight','steps','spend','calories']) if (fields[k] !== '' && fields[k] !== undefined && isNaN(fields[k])) { toast('Check the ' + k + ' value: numbers only.'); return; }
+  if (foodTotals(state.logDate).n) delete fields.protein;
+  for (const k of ['weight','steps','spend']) if (fields[k] !== '' && fields[k] !== undefined && isNaN(fields[k])) { toast('Check the ' + k + ' value: numbers only.'); return; }
   if (fields.weight !== '' && (fields.weight < 40 || fields.weight > 250)) { toast('That weight looks wrong. Enter it in kg.'); return; }
   const btn = form.querySelector('[type=submit]'); btn.disabled = true; btn.textContent = 'Saving';
   await send({action:'day', date: state.logDate, fields}, 'Day saved');
+}
+
+/* Food log */
+const MEALS = ['Breakfast','Lunch','Dinner','Snacks'];
+function foodEntries(iso){ return (D().foodLog || []).filter(e => e.date === iso); }
+function foodTotals(iso){ const es = D() ? foodEntries(iso) : []; return {n: es.length, protein: es.reduce((a,e) => a + (num(e.protein)||0), 0), kcal: es.reduce((a,e) => a + (num(e.kcal)||0), 0)}; }
+const g0 = v => Math.round(v);
+function foodSection(iso, ft){
+  const target = num(S().proteinTarget) || 0, pct = target ? Math.min(100, ft.protein/target*100) : 0;
+  const es = foodEntries(iso);
+  const meals = MEALS.map(m => {
+    const list = es.filter(e => e.meal === m);
+    const mp = list.reduce((a,e) => a + (num(e.protein)||0), 0);
+    return '<div class="meal"><div class="meal-h"><span><b>'+m+'</b>'+(list.length ? '<span class="mp">'+g0(mp)+' g</span>' : '')+'</span><button type="button" data-addfood="'+m+'">Add food</button></div>' +
+      list.map(e => '<div class="entry"><div><div class="en">'+esc(e.food)+'</div><div class="es">'+(num(e.servings) && num(e.servings) !== 1 ? esc(e.servings)+' × ' : '')+esc(e.serving)+', '+g0(num(e.kcal)||0)+' kcal</div></div><span class="ep">'+g0(num(e.protein)||0)+' g</span>' +
+        (e.row ? '<button type="button" aria-label="Remove '+esc(e.food)+'" data-delfood="'+e.row+'"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l8 8M12 4l-8 8"/></svg></button>' : '<span class="es">Syncing</span>') + '</div>').join('') + '</div>';
+  }).join('');
+  return '<h2>Food</h2><div class="fuel"><div class="fuel-top"><div class="fuel-num">'+g0(ft.protein)+'<small> / '+(target||'–')+' g protein</small></div><div class="fuel-kcal">'+g0(ft.kcal).toLocaleString('en-GB')+' kcal</div></div>' +
+    '<div class="bar'+(target && ft.protein >= target ? ' done' : '')+'"><i style="width:'+pct.toFixed(1)+'%"></i></div></div>' + meals +
+    '<p class="small muted" style="margin:8px 0 0">Calories are counted for the maintenance model later in the season. In pre-season the number to chase is protein.</p>';
+}
+function openFood(meal){
+  state.food = {meal, step: 'search', q: '', list: [], off: [], offState: '', pick: null, servings: 1, grams: 100, save: false};
+  $('#sheet-crumb').textContent = fmtDay(state.logDate);
+  renderFood(); const sh = $('#sheet'); sh.classList.add('open'); sh.scrollTop = 0;
+  setTimeout(() => { const i = $('#fq'); if (i) i.focus(); }, 320);
+}
+function recentFoods(){
+  const seen = new Set(), out = [];
+  (D().foodLog || []).slice().sort((a,b) => a.date < b.date ? 1 : -1).forEach(e => {
+    if (seen.has(e.food) || out.length >= 8) return; seen.add(e.food);
+    const sv = num(e.servings) || 1;
+    out.push({food: e.food, serving: e.serving, protein: (num(e.protein)||0)/sv, kcal: (num(e.kcal)||0)/sv, source: e.source || 'Recent'});
+  });
+  return out;
+}
+function foodMatches(q){
+  const toks = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const pool = [...D().foods, ...recentFoods().filter(r => !D().foods.some(f => f.food === r.food))];
+  return pool.filter(f => toks.every(t => f.food.toLowerCase().includes(t))).slice(0, 30);
+}
+function itemHtml(f, i){
+  const per = f.per100 ? 'per 100 g' : esc(f.serving);
+  return '<button type="button" class="food-item" data-pick="'+i+'"><div class="fn">'+esc(f.food)+'</div><div class="fs">'+per+', <span class="fp">'+fmtG(f.protein)+' g protein</span>, '+g0(f.kcal)+' kcal</div></button>';
+}
+const fmtG = v => (Math.round(v*10)/10).toString();
+function renderFoodResults(){
+  const F = state.food, box = $('#fres'); if (!box) return;
+  let html = ''; F.list = [];
+  const add = (title, arr) => { if (!arr.length) return; html += '<p class="fgroup">'+title+'</p>' + arr.map(f => { F.list.push(f); return itemHtml(f, F.list.length-1); }).join(''); };
+  if (!F.q.trim()){
+    add('Recent', recentFoods());
+    add('Canteen', D().foods.filter(f => f.source === 'Canteen'));
+    add('Common foods', D().foods.filter(f => f.source !== 'Canteen'));
+  } else {
+    const m = foodMatches(F.q);
+    add('Matches', m);
+    if (!m.length) html += '<p class="muted" style="margin-top:14px">Nothing in your foods matches that.</p>';
+    html += '<div class="row-btns"><button type="button" class="btn ghost small" data-offsearch>'+(F.offState === 'loading' ? 'Searching Open Food Facts' : 'Search Open Food Facts')+'</button><button type="button" class="btn ghost small" data-quickadd>Quick add</button></div>';
+    if (F.offState === 'error') html += '<p class="muted small" style="margin-top:10px">Open Food Facts did not respond. Try again in a minute, or use quick add.</p>';
+    if (F.offState === 'done' && !F.off.length) html += '<p class="muted small" style="margin-top:10px">No UK products found with protein listed.</p>';
+    add('Open Food Facts (UK products, crowd-sourced)', F.off);
+  }
+  box.innerHTML = html;
+}
+async function searchOFF(){
+  const F = state.food; if (!F.q.trim() || F.offState === 'loading') return;
+  F.offState = 'loading'; renderFoodResults();
+  try {
+    const u = 'https://world.openfoodfacts.org/cgi/search.pl?search_terms=' + encodeURIComponent(F.q.trim()) + '&search_simple=1&action=process&json=1&page_size=24&fields=code,product_name,brands,serving_size,serving_quantity,nutriments&tagtype_0=countries&tag_contains_0=contains&tag_0=united-kingdom';
+    const r = await fetch(u); const j = await r.json();
+    F.off = (j.products || []).map(p => {
+      const n = p.nutriments || {}, pr = num(n.proteins_100g), kc = num(n['energy-kcal_100g']);
+      if (pr === null || !p.product_name) return null;
+      const brand = (p.brands || '').split(',')[0].trim();
+      return {food: p.product_name.trim() + (brand ? ', ' + brand : ''), serving: '100 g', protein: pr, kcal: kc || 0, per100: true, servingG: num(p.serving_quantity), servingText: p.serving_size || '', source: 'Open Food Facts'};
+    }).filter(Boolean).slice(0, 15);
+    F.offState = 'done';
+  } catch(e){ F.offState = 'error'; }
+  if (state.food === F) renderFoodResults();
+}
+function amountTotals(){
+  const F = state.food, f = F.pick;
+  const mult = f.per100 ? (num(F.grams) || 0)/100 : F.servings;
+  return {protein: f.protein*mult, kcal: f.kcal*mult, servings: f.per100 ? 1 : F.servings, serving: f.per100 ? (num(F.grams)||0) + ' g' : f.serving};
+}
+function renderFood(){
+  const F = state.food, body = $('#sheet-body');
+  const mealChips = '<div class="chips" role="group" aria-label="Meal">' + MEALS.map(m => '<button type="button" data-meal="'+m+'" aria-pressed="'+(F.meal===m)+'">'+m+'</button>').join('') + '</div>';
+  if (F.step === 'search'){
+    body.innerHTML = '<h3 id="sheet-title">Add to '+F.meal.toLowerCase()+'</h3><input id="fq" class="fsearch" type="search" placeholder="Search foods" autocomplete="off" value="'+esc(F.q)+'"><div id="fres"></div>';
+    renderFoodResults(); return;
+  }
+  if (F.step === 'quick'){
+    body.innerHTML = '<h3 id="sheet-title">Quick add</h3><form class="qa" id="qaform" autocomplete="off">' +
+      '<label for="qa-name">Food</label><input id="qa-name" name="food" value="'+esc(F.q)+'" required>' +
+      '<label for="qa-serv">Serving</label><input id="qa-serv" name="serving" placeholder="1 serving">' +
+      '<div class="two"><div><label for="qa-p">Protein, g</label><input id="qa-p" name="protein" inputmode="decimal" required></div><div><label for="qa-k">Calories, kcal</label><input id="qa-k" name="kcal" inputmode="numeric"></div></div>' +
+      mealChips + '<label class="check"><input type="checkbox" name="save"> Save to my foods</label>' +
+      '<div class="row-btns"><button class="btn wide" type="submit">Add to '+F.meal.toLowerCase()+'</button></div><p><button type="button" class="link small" data-foodback>Back to search</button></p></form>';
+    return;
+  }
+  const f = F.pick, t = amountTotals();
+  const control = f.per100 ?
+    '<div class="amt"><label for="fg" class="lab" style="display:block;margin-top:16px;font-weight:700">Amount in grams</label><input id="fg" inputmode="decimal" value="'+esc(F.grams)+'"></div>' +
+      (f.servingG ? '<div class="chips"><button type="button" data-grams="'+f.servingG+'">1 serving ('+fmtG(f.servingG)+' g)</button><button type="button" data-grams="100">100 g</button></div>' : '')
+    : '<div class="stepper"><button type="button" data-step="-0.5" aria-label="Less">−</button><span class="sv">'+fmtG(F.servings)+'</span><button type="button" data-step="0.5" aria-label="More">+</button><span class="muted">× '+esc(f.serving)+'</span></div>';
+  body.innerHTML = '<h3 id="sheet-title">'+esc(f.food)+'</h3><p class="muted">'+(f.per100 ? 'Per 100 g' : esc(f.serving))+': '+fmtG(f.protein)+' g protein, '+g0(f.kcal)+' kcal'+(f.source==='Open Food Facts' ? '. Crowd-sourced, so check against the packet.' : '')+'</p>' +
+    control + '<p class="adds" id="adds">Adds <b>'+g0(t.protein)+' g protein</b>, '+g0(t.kcal)+' kcal</p>' + mealChips +
+    (f.source === 'Open Food Facts' ? '<label class="check"><input type="checkbox" id="fsave"'+(F.save?' checked':'')+'> Save to my foods</label>' : '') +
+    '<div class="row-btns"><button type="button" class="btn wide" data-addit>Add to '+F.meal.toLowerCase()+'</button></div><p><button type="button" class="link small" data-foodback>Back to search</button></p>';
+}
+async function commitFood(entry, saveFood){
+  const date = state.logDate; closeSheet();
+  if (saveFood) { try { await api('POST', {action:'food_save', food: saveFood}); } catch(e){} }
+  await send({action:'food_add', date, entry}, entry.food.length > 28 ? 'Added' : entry.food + ' added');
+}
+async function deleteFood(row){
+  const e = D().foodLog.find(x => x.row === row); if (!e) return;
+  if (state.lastError === 'offline') { toast('Removing needs a connection. Try again when you are online.'); return; }
+  await send({action:'food_delete', row, date: e.date, food: e.food}, 'Removed');
 }
 
 /* Player card */
@@ -666,7 +831,7 @@ function openSession(row){
   renderSheet(); const sh = $('#sheet'); sh.classList.add('open'); sh.scrollTop = 0;
   setTimeout(() => { const b = $('#sheet-body button'); if (b) b.focus(); }, 300);
 }
-function closeSheet(){ $('#sheet').classList.remove('open'); state.sess = null; }
+function closeSheet(){ $('#sheet').classList.remove('open'); state.sess = null; state.food = null; }
 function renderSheet(){
   const s = state.sess, f = s.f, body = $('#sheet-body');
   const w = workoutOf(f.session);
@@ -728,6 +893,18 @@ document.addEventListener('click', e => {
   if ('reenergy' in b.dataset) { state.sess.step = 'energy'; return renderSheet(); }
   if (b.dataset.logsets) { state.sess.sets[b.dataset.logsets] = Array.from({length: Number(b.dataset.n)}, () => ({weight:'', reps:'', rir:''})); return renderSheet(); }
   if (b.dataset.result) return saveResult(b.dataset.result);
+  if (b.dataset.addfood) return openFood(b.dataset.addfood);
+  if (b.dataset.delfood) return deleteFood(Number(b.dataset.delfood));
+  if (b.dataset.pick !== undefined && state.food) { const f = state.food.list[Number(b.dataset.pick)]; Object.assign(state.food, {pick: f, step: 'amount', servings: 1, grams: f.per100 ? (f.servingG || 100) : 100}); return renderFood(); }
+  if ('offsearch' in b.dataset) return searchOFF();
+  if ('quickadd' in b.dataset) { state.food.step = 'quick'; return renderFood(); }
+  if ('foodback' in b.dataset) { state.food.step = 'search'; return renderFood(); }
+  if (b.dataset.meal) { state.food.meal = b.dataset.meal; b.parentElement.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x.dataset.meal === state.food.meal)); const a = document.querySelector('[data-addit], #qaform [type=submit]'); if (a) a.textContent = 'Add to ' + state.food.meal.toLowerCase(); $('#sheet-title') && state.food.step === 'search' && ($('#sheet-title').textContent = 'Add to ' + state.food.meal.toLowerCase()); return; }
+  if (b.dataset.step) { state.food.servings = Math.max(0.5, Math.round((state.food.servings + Number(b.dataset.step))*2)/2); return renderFood(); }
+  if (b.dataset.grams) { state.food.grams = Number(b.dataset.grams); return renderFood(); }
+  if ('addit' in b.dataset) { const F = state.food, f = F.pick, t = amountTotals(); if (!(t.protein >= 0) || (f.per100 && !(num(F.grams) > 0))) { toast('Enter an amount first.'); return; }
+    const sv = $('#fsave'); const save = sv && sv.checked && f.per100 ? {food: f.food, serving: (num(F.grams)||100) + ' g', protein: Math.round(t.protein*10)/10, kcal: Math.round(t.kcal)} : null;
+    return commitFood({meal: F.meal, food: f.food, servings: t.servings, serving: t.serving, protein: Math.round(t.protein*10)/10, kcal: Math.round(t.kcal), source: f.source}, save); }
   if (b.dataset.day) { state.logDate = addDays(state.logDate, Number(b.dataset.day)); return renderLog(); }
   if (b.dataset.toggle) { const k = b.dataset.toggle; state.draft[k] = !state.draft[k]; b.setAttribute('aria-pressed', state.draft[k]); b.querySelector('.tick').classList.toggle('on', state.draft[k]); return; }
   if (b.dataset.seg) { const k = b.dataset.seg, v = Number(b.dataset.v); state.draft[k] = state.draft[k] === v ? null : v;
@@ -735,19 +912,31 @@ document.addEventListener('click', e => {
   if (b.dataset.week) { const w = Number(b.dataset.week); state.wallPick = state.wallPick === w ? null : w; return renderSeason(); }
 });
 document.addEventListener('input', e => {
-  const el = e.target; if (!el.dataset.set) return;
+  const el = e.target;
+  if (el.id === 'fq') { state.food.q = el.value; state.food.off = []; state.food.offState = ''; renderFoodResults(); return; }
+  if (el.id === 'fg') { state.food.grams = el.value.replace(',', '.'); const t = amountTotals(); $('#adds').innerHTML = 'Adds <b>'+g0(t.protein)+' g protein</b>, '+g0(t.kcal)+' kcal'; return; }
+  if (!el.dataset.set) return;
   state.sess.sets[el.dataset.set][Number(el.dataset.i)][el.dataset.k] = el.value.trim().replace(',', '.');
 });
 document.addEventListener('submit', e => {
   e.preventDefault();
   if (e.target.id === 'dayform') return saveDay(e.target);
+  if (e.target.id === 'qaform') {
+    const f = new FormData(e.target), p = num(String(f.get('protein')).replace(',', '.')), k = num(f.get('kcal')) || 0;
+    const name = String(f.get('food')||'').trim(), serving = String(f.get('serving')||'').trim() || '1 serving';
+    if (!name || p === null) { toast('Add a name and the protein.'); return; }
+    return commitFood({meal: state.food.meal, food: name, servings: 1, serving, protein: p, kcal: k, source: 'Quick add'}, f.get('save') ? {food: name, serving, protein: p, kcal: k} : null);
+  }
   if (e.target.id === 'setform') {
     const f = new FormData(e.target);
     state.cfg = {name: String(f.get('name')||'').trim(), url: String(f.get('url')||'').trim(), token: String(f.get('token')||'').trim()};
     LS.set('cfg', state.cfg); toast('Settings saved'); show('matchday'); refresh();
   }
 });
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && state.sess) closeSheet(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && (state.sess || state.food)) closeSheet();
+  if (e.key === 'Enter' && e.target.id === 'fq') { e.preventDefault(); searchOFF(); }
+});
 window.addEventListener('online', () => refresh(true));
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && (!D() || Date.now() - Date.parse(D().fetchedAt) > 5*60000)) refresh(true);

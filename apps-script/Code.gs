@@ -9,8 +9,8 @@ const DAILY_KEYS = {
   'Date': 'date', 'Week': 'week', 'Weight (kg)': 'weight', 'Trend (kg)': 'trend', 'Steps': 'steps',
   'Evening walk': 'walk', 'Protein target hit': 'protein', 'In bed on time': 'bed',
   'Cooked dinner at home': 'cooked', 'Mood (1–5)': 'mood', 'Energy (1–5)': 'energy',
-  'Food spend (£)': 'spend', 'Calories (from League Two)': 'calories', 'Notes': 'notes',
-  'Basics hit (of 4)': 'basics', 'Training-ground points': 'tg'
+  'Food spend (£)': 'spend', 'Calories (from League Two)': 'calories', 'Calories (kcal)': 'calories', 'Notes': 'notes',
+  'Basics hit (of 4)': 'basics', 'Training-ground points': 'tg', 'Protein logged (g)': 'proteinG'
 };
 const DAY_WRITABLE = ['weight', 'steps', 'walk', 'protein', 'bed', 'cooked', 'mood', 'energy', 'spend', 'calories', 'notes'];
 const DAY_BOOLEAN = ['walk', 'protein', 'bed', 'cooked'];
@@ -36,6 +36,9 @@ function doPost(e) {
     if (body.action === 'day') saveDay_(body);
     else if (body.action === 'fixture') saveFixture_(body);
     else if (body.action === 'lifts') saveLifts_(body);
+    else if (body.action === 'food_add') addFood_(body);
+    else if (body.action === 'food_delete') deleteFood_(body);
+    else if (body.action === 'food_save') saveFood_(body);
     else return json_({ ok: false, error: 'Unknown action: ' + body.action });
     SpreadsheetApp.flush();
     return json_({ ok: true, data: readAll_() });
@@ -58,7 +61,9 @@ function readAll_() {
     divisions: readDivisions_(ss),
     trophies: readTrophies_(ss),
     programme: readProgramme_(ss),
-    lifts: readLifts_(ss)
+    lifts: readLifts_(ss),
+    foods: readFoods_(ss),
+    foodLog: readFoodLog_(ss)
   };
 }
 
@@ -152,6 +157,27 @@ function readLifts_(ss) {
     });
 }
 
+function readFoods_(ss) {
+  const sh = ss.getSheetByName('Foods');
+  if (!sh || sh.getLastRow() < 5) return [];
+  return sh.getRange(5, 1, sh.getLastRow() - 4, 5).getValues()
+    .filter(function (r) { return r[0] !== ''; })
+    .map(function (r) { return { food: String(r[0]), serving: String(r[1]), protein: Number(r[2]) || 0, kcal: Number(r[3]) || 0, source: String(r[4] || '') }; });
+}
+
+function readFoodLog_(ss) {
+  const sh = ss.getSheetByName('Food Log');
+  if (!sh || sh.getLastRow() < 2) return [];
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 60);
+  const v = sh.getRange(2, 1, sh.getLastRow() - 1, 8).getValues();
+  const out = [];
+  v.forEach(function (r, i) {
+    if (!isDate_(r[0]) || r[0] < cutoff) return;
+    out.push({ row: i + 2, date: cell_(r[0]), meal: r[1], food: r[2], servings: r[3], serving: r[4], protein: Number(r[5]) || 0, kcal: Number(r[6]) || 0, source: r[7] });
+  });
+  return out;
+}
+
 /* ---------- writing ---------- */
 
 function parseDate_(s) { return Utilities.parseDate(String(s), tz_(), 'yyyy-MM-dd'); }
@@ -200,6 +226,46 @@ function saveLifts_(body) {
   const date = parseDate_(body.date);
   const ag = sets.map(function (s) { return [date, body.session || '', s.exercise, s.set, s.weight === '' ? '' : Number(s.weight), s.reps === '' ? '' : Number(s.reps), s.rir === '' ? '' : Number(s.rir)]; });
   sh.getRange(next, 1, ag.length, 7).setValues(ag);
+}
+
+function addFood_(body) {
+  const sh = SpreadsheetApp.getActive().getSheetByName('Food Log');
+  const e = body.entry || {};
+  if (!e.food) throw new Error('Missing food name');
+  sh.appendRow([parseDate_(body.date), e.meal || '', e.food, Number(e.servings) || 1, e.serving || '', Number(e.protein) || 0, Number(e.kcal) || 0, e.source || '']);
+  updateDayTotals_(body.date);
+}
+
+function deleteFood_(body) {
+  const sh = SpreadsheetApp.getActive().getSheetByName('Food Log');
+  const row = Number(body.row);
+  if (!row || row < 2) throw new Error('Missing food row');
+  const r = sh.getRange(row, 1, 1, 3).getValues()[0];
+  if (!isDate_(r[0]) || Utilities.formatDate(r[0], tz_(), 'yyyy-MM-dd') !== body.date || r[2] !== body.food) throw new Error('That entry has changed in the sheet. Refresh and try again.');
+  sh.deleteRow(row);
+  updateDayTotals_(body.date);
+}
+
+function saveFood_(body) {
+  const sh = SpreadsheetApp.getActive().getSheetByName('Foods');
+  const f = body.food || {};
+  if (!f.food) throw new Error('Missing food name');
+  sh.appendRow([f.food, f.serving || '1 serving', Number(f.protein) || 0, Number(f.kcal) || 0, 'Saved']);
+}
+
+function updateDayTotals_(date) {
+  const ss = SpreadsheetApp.getActive();
+  const log = ss.getSheetByName('Food Log');
+  let protein = 0, kcal = 0, n = 0;
+  if (log.getLastRow() >= 2) {
+    log.getRange(2, 1, log.getLastRow() - 1, 7).getValues().forEach(function (r) {
+      if (isDate_(r[0]) && Utilities.formatDate(r[0], tz_(), 'yyyy-MM-dd') === date) { protein += Number(r[5]) || 0; kcal += Number(r[6]) || 0; n++; }
+    });
+  }
+  const target = Number(ss.getSheetByName('Settings').getRange('B10').getValue()) || 0;
+  const fields = { calories: n ? Math.round(kcal) : '' };
+  if (n) fields.protein = target > 0 && protein >= target;
+  saveDay_({ date: date, fields: fields });
 }
 
 function json_(obj) {
