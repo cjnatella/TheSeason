@@ -327,7 +327,20 @@ async function api(method, payload){
   if (!j.ok) { const e = new Error(j.error || 'The sheet refused the request.'); e.fatal = true; throw e; }
   return j.data;
 }
-function setData(d){ state.data = d; LS.set('data', d); }
+/* dates arrive as yyyy-mm-dd; older script versions send full timestamps, so normalise to local dates */
+const normD = v => (typeof v === 'string' && /^\d{4}-\d\d-\d\dT/.test(v)) ? isoOf(new Date(v)) : v;
+const normT = v => { if (typeof v === 'string' && /^\d{4}-\d\d-\d\dT/.test(v)) { const d = new Date(v); return pad(d.getHours())+':'+pad(d.getMinutes()); } return v; };
+function normalise(d){
+  if (!d) return d;
+  d.settings.kickoff = normD(d.settings.kickoff); d.settings.bedBy = normT(d.settings.bedBy);
+  d.daily.forEach(r => r.date = normD(r.date));
+  d.fixtures.forEach(r => r.date = normD(r.date));
+  d.divisions.rows.forEach(r => { r.start = normD(r.start); r.end = normD(r.end); });
+  d.trophies.forEach(r => r.earned = normD(r.earned));
+  d.lifts.forEach(r => r.date = normD(r.date));
+  return d;
+}
+function setData(d){ state.data = normalise(d); LS.set('data', state.data); }
 async function refresh(quiet){
   if (!state.cfg.url) { render(); return; }
   state.syncing = true; status();

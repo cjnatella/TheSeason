@@ -63,9 +63,10 @@ function readAll_() {
 }
 
 function tz_() { return SpreadsheetApp.getActive().getSpreadsheetTimeZone(); }
+function isDate_(v) { return Object.prototype.toString.call(v) === '[object Date]'; }
 
 function cell_(v) {
-  if (v instanceof Date) {
+  if (isDate_(v)) {
     if (v.getFullYear() < 1910) return Utilities.formatDate(v, tz_(), 'HH:mm');
     return Utilities.formatDate(v, tz_(), 'yyyy-MM-dd');
   }
@@ -161,7 +162,7 @@ function saveDay_(body) {
   const header = values[0];
   let rowIndex = -1;
   for (let i = 1; i < values.length; i++) {
-    if (values[i][0] instanceof Date && Utilities.formatDate(values[i][0], tz_(), 'yyyy-MM-dd') === body.date) { rowIndex = i + 1; break; }
+    if (isDate_(values[i][0]) && Utilities.formatDate(values[i][0], tz_(), 'yyyy-MM-dd') === body.date) { rowIndex = i + 1; break; }
   }
   if (rowIndex < 0) throw new Error('No Daily Log row for ' + body.date);
   const fields = body.fields || {};
@@ -182,7 +183,7 @@ function saveFixture_(body) {
   if (!row || row < 2) throw new Error('Missing fixture row');
   const dateCol = header.indexOf('Date') + 1;
   const d = sh.getRange(row, dateCol).getValue();
-  if (!(d instanceof Date) || Utilities.formatDate(d, tz_(), 'yyyy-MM-dd') !== body.date) throw new Error('The fixture has moved in the sheet. Refresh and try again.');
+  if (!isDate_(d) || Utilities.formatDate(d, tz_(), 'yyyy-MM-dd') !== body.date) throw new Error('The fixture has moved in the sheet. Refresh and try again.');
   const set = function (name, v) { const c = header.indexOf(name) + 1; if (c > 0) sh.getRange(row, c).setValue(v); };
   if ('energy' in body) set('Energy (1–5)', body.energy === null ? '' : body.energy);
   if ('result' in body) set('Result (W/D/L)', body.result || '');
